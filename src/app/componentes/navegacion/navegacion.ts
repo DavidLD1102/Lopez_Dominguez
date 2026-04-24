@@ -35,9 +35,11 @@ export class Navegacion implements OnInit {
       const g = (window as any).google;
       if (g && g.accounts) {
         g.accounts.id.initialize({
-          client_id: '454906083366-v0cj08q6el8vo6j82q5hp9cj91cqnm15.apps.googleusercontent.com',
+          client_id: '454906083366-v0cj08q6el8vo6j82q5hp9cqnm15.apps.googleusercontent.com',
           callback: (response: any) => this.procesarLogin(response),
-          auto_select: false // Evita que entre automático sin preguntar
+          auto_select: false,
+          // SOLUCIÓN AL ERROR FedCM:
+          use_fedcm_for_prompt: true 
         });
         clearInterval(interval);
         console.log("✅ Google SDK listo");
@@ -50,14 +52,13 @@ export class Navegacion implements OnInit {
     const g = (window as any).google;
     
     if (g && g.accounts) {
-      // --- TRUCO MAESTRO PARA EVITAR 'suppressed_by_user' ---
-      // Borramos la cookie de estado de Google para que siempre muestre el prompt
+      // Limpiamos la cookie de estado para evitar el error 'suppressed_by_user'
       document.cookie = "g_state=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
       
       g.accounts.id.prompt((notification: any) => {
         if (notification.isNotDisplayed()) {
-          console.warn("Motivo de bloqueo:", notification.getNotDisplayedReason());
-          // Si el prompt falla, intentamos una segunda vez tras limpiar
+          console.warn("El prompt no se mostró, motivo:", notification.getNotDisplayedReason());
+          // Intento de respaldo si el prompt es bloqueado por FedCM
           g.accounts.id.prompt();
         }
       });
@@ -68,12 +69,14 @@ export class Navegacion implements OnInit {
     this.ngZone.run(() => {
       try {
         console.log("🔑 Token recibido");
-        this.userData = jwtDecode(response.credential);
-        console.log("👤 Usuario:", this.userData.name);
+        const token = response.credential;
+        this.userData = jwtDecode(token);
+        console.log("👤 Usuario identificado:", this.userData.name);
         
+        // Forzamos a Angular a actualizar la vista con el nombre y foto
         this.cdr.detectChanges();
       } catch (error) {
-        console.error("Error al decodificar token:", error);
+        console.error("Error al decodificar el token:", error);
       }
     });
   }
@@ -84,7 +87,7 @@ export class Navegacion implements OnInit {
     if (g) {
       g.accounts.id.disableAutoSelect();
     }
-    // Opcional: Limpiar cookies de sesión para permitir cambio de cuenta
+    // Limpiamos rastro de sesión para que pueda elegir otra cuenta al volver
     document.cookie = "g_state=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     this.cdr.detectChanges();
     console.log("Sesión cerrada");
