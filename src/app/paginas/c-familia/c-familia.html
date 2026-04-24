@@ -1,0 +1,22 @@
+<div class="container mt-4">
+  <table class="table table-dark table-hover shadow">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Nombre</th>
+        <th>Apellidos</th>
+        <th>Color favorito</th>
+        <th>Fecha de nacimiento</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let integrante of datosFamilia">
+        <td>{{ integrante.id }}</td>
+        <td>{{ integrante.nombre }}</td>
+        <td>{{ integrante.apellidos }}</td>
+        <td>{{ integrante.color_fav }}</td>
+        <td>{{ integrante.fecha_nacimiento }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
