@@ -35,16 +35,16 @@ export class Navegacion implements OnInit {
       const g = (window as any).google;
       if (g && g.accounts) {
         g.accounts.id.initialize({
-          // ID de cliente verificado
           client_id: '454906083366-v0cj08q6el8vo6j82q5hp9cqnm15.apps.googleusercontent.com',
           callback: (response: any) => this.procesarLogin(response),
           auto_select: false,
-          use_fedcm_for_prompt: true,
+          // IMPORTANTE: Mantenemos esto en false para saltar el error de red de Chrome
+          use_fedcm_for_prompt: false, 
           ux_mode: 'popup',
-          context: 'signin'
+          context: 'signin',
         });
         clearInterval(interval);
-        console.log("✅ Google SDK listo");
+        console.log("✅ Google SDK listo (Modo Clásico)");
       }
     }, 500);
   }
@@ -54,14 +54,13 @@ export class Navegacion implements OnInit {
     const g = (window as any).google;
     
     if (g && g.accounts) {
-      // Limpieza de rastro de sesiones previas que causan bloqueos
+      // Limpiamos rastro de errores previos en las cookies
       document.cookie = "g_state=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
       
       // Lanzamos el selector de cuentas
       g.accounts.id.prompt((notification: any) => {
         if (notification.isNotDisplayed()) {
-          console.warn("El prompt no se mostró:", notification.getNotDisplayedReason());
-          // Intento de respaldo si el navegador bloquea la visualización automática
+          console.warn("El prompt no se mostró. Reintentando apertura forzada...");
           g.accounts.id.prompt();
         }
       });
@@ -71,15 +70,13 @@ export class Navegacion implements OnInit {
   procesarLogin(response: any) {
     this.ngZone.run(() => {
       try {
-        console.log("🔑 Credencial recibida correctamente");
+        console.log("🔑 Credencial recibida");
         const token = response.credential;
         this.userData = jwtDecode(token);
-        console.log("👤 Usuario identificado:", this.userData.name);
-        
-        // Forzamos la actualización de la vista de Angular
+        console.log("👤 Usuario:", this.userData.name);
         this.cdr.detectChanges();
       } catch (error) {
-        console.error("Error al procesar los datos del usuario:", error);
+        console.error("Error al procesar el token:", error);
       }
     });
   }
@@ -90,7 +87,6 @@ export class Navegacion implements OnInit {
     if (g) {
       g.accounts.id.disableAutoSelect();
     }
-    // Limpiamos rastro de sesión para permitir un nuevo inicio limpio
     document.cookie = "g_state=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     this.cdr.detectChanges();
     console.log("Sesión cerrada");
