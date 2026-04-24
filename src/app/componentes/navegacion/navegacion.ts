@@ -35,54 +35,40 @@ export class Navegacion implements OnInit {
       const g = (window as any).google;
       if (g && g.accounts) {
         g.accounts.id.initialize({
-          // Verifica que este Client ID sea exactamente el de la consola de Google Cloud
           client_id: '454906083366-v0cj08q6el8vo6j82q5hp9cqnm15.apps.googleusercontent.com',
           callback: (response: any) => this.procesarLogin(response),
           auto_select: false,
-          // Forzamos el uso de FedCM para cumplir con las nuevas reglas de Chrome
-          use_fedcm_for_prompt: true,
-          // Establecemos el modo popup para evitar redirecciones que causen error 403
-          ux_mode: 'popup',
+          ux_mode: 'redirect', // CAMBIO CLAVE: Usamos redirección para saltar bloqueos de popup
+          login_uri: 'https://lopez-dominguez.vercel.app', // Tu URL de Vercel
           context: 'signin'
         });
         clearInterval(interval);
-        console.log("✅ Google SDK listo");
+        console.log("✅ Google SDK listo en modo Redirect");
       }
     }, 500);
   }
 
   loginConGoogle() {
-    console.log("🔘 Click en el botón de iniciar sesión");
+    console.log("🔘 Iniciando flujo de login...");
     const g = (window as any).google;
-    
     if (g && g.accounts) {
-      // Limpiamos la cookie de estado de Google para evitar bloqueos por intentos fallidos previos
+      // Limpiamos rastro de errores previos
       document.cookie = "g_state=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
       
-      // Lanzamos la ventana de selección de cuenta
-      g.accounts.id.prompt((notification: any) => {
-        if (notification.isNotDisplayed()) {
-          console.warn("El prompt no se mostró:", notification.getNotDisplayedReason());
-          // Intento de respaldo forzado si el navegador lo bloquea inicialmente
-          g.accounts.id.prompt();
-        }
-      });
+      // Lanzamos el selector de cuentas
+      g.accounts.id.prompt();
     }
   }
 
   procesarLogin(response: any) {
-    // NgZone asegura que Angular detecte el cambio de datos que viene de fuera (Google SDK)
     this.ngZone.run(() => {
       try {
-        console.log("🔑 Token recibido");
         const token = response.credential;
         this.userData = jwtDecode(token);
-        console.log("👤 Usuario identificado:", this.userData.name);
-        
-        // Forzamos la actualización de la interfaz para mostrar nombre y foto
+        console.log("👤 Bienvenido:", this.userData.name);
         this.cdr.detectChanges();
       } catch (error) {
-        console.error("Error al decodificar el token:", error);
+        console.error("Error al procesar login:", error);
       }
     });
   }
@@ -90,12 +76,8 @@ export class Navegacion implements OnInit {
   logout() {
     this.userData = null;
     const g = (window as any).google;
-    if (g) {
-      g.accounts.id.disableAutoSelect();
-    }
-    // Limpiamos rastro de sesión para permitir elegir otra cuenta al volver
+    if (g) g.accounts.id.disableAutoSelect();
     document.cookie = "g_state=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     this.cdr.detectChanges();
-    console.log("Sesión cerrada");
   }
 }
