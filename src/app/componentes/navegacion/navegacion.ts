@@ -37,46 +37,30 @@ export class Navegacion implements OnInit {
         g.accounts.id.initialize({
           client_id: '454906083366-v0cj08q6el8vo6j82q5hp9cqnm15.apps.googleusercontent.com',
           callback: (response: any) => this.procesarLogin(response),
-          auto_select: false,
-          // IMPORTANTE: Mantenemos esto en false para saltar el error de red de Chrome
-          use_fedcm_for_prompt: false, 
-          ux_mode: 'popup',
-          context: 'signin',
+          use_fedcm_for_prompt: true // Lo activamos para cumplir con Chrome
         });
+
+        // Esto dibuja el botón oficial en el DIV con id "buttonDiv"
+        g.accounts.id.renderButton(
+          document.getElementById("buttonDiv"),
+          { theme: "outline", size: "large", text: "signin_with" } 
+        );
+
         clearInterval(interval);
-        console.log("✅ Google SDK listo (Modo Clásico)");
+        console.log("✅ Botón de Google renderizado");
       }
     }, 500);
-  }
-
-  loginConGoogle() {
-    console.log("🔘 Iniciando flujo de sesión...");
-    const g = (window as any).google;
-    
-    if (g && g.accounts) {
-      // Limpiamos rastro de errores previos en las cookies
-      document.cookie = "g_state=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-      
-      // Lanzamos el selector de cuentas
-      g.accounts.id.prompt((notification: any) => {
-        if (notification.isNotDisplayed()) {
-          console.warn("El prompt no se mostró. Reintentando apertura forzada...");
-          g.accounts.id.prompt();
-        }
-      });
-    }
   }
 
   procesarLogin(response: any) {
     this.ngZone.run(() => {
       try {
-        console.log("🔑 Credencial recibida");
         const token = response.credential;
         this.userData = jwtDecode(token);
-        console.log("👤 Usuario:", this.userData.name);
+        console.log("👤 Usuario logueado:", this.userData.name);
         this.cdr.detectChanges();
       } catch (error) {
-        console.error("Error al procesar el token:", error);
+        console.error("Error al procesar login:", error);
       }
     });
   }
@@ -84,11 +68,9 @@ export class Navegacion implements OnInit {
   logout() {
     this.userData = null;
     const g = (window as any).google;
-    if (g) {
-      g.accounts.id.disableAutoSelect();
-    }
-    document.cookie = "g_state=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    if (g) g.accounts.id.disableAutoSelect();
     this.cdr.detectChanges();
-    console.log("Sesión cerrada");
+    // Recargamos para que el botón de Google vuelva a aparecer
+    setTimeout(() => this.inicializarServicioGoogle(), 100);
   }
 }
